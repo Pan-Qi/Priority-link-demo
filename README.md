@@ -1,2 +1,2 @@
-# Priority-link-demo
+# PriorityLink-demo
 Demo repo for priority link hackthon project

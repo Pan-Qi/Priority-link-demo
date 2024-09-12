@@ -36,26 +36,29 @@ jobs:
             const issue_number = issue.number;
             const issue_title = issue.title;
             const issue_body = issue.body;
-            
-            // Retrieve comments if there are any
-            const { data: comments } = await github.issues.listComments({
+            const issue_state = issue.state; // "open", "closed", etc.
+
+            // Retrieve comments using octokit
+            const comments = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: issue_number
             });
 
-            // Collect comments
-            let comment_data = '';
-            if (comments.length > 0) {
-              comment_data = comments.map(comment => `Comment by ${comment.user.login}: ${comment.body}`).join("\n");
-            }
+            // Collect comments in JSON format as an array
+            const comment_list = comments.data.map(comment => ({
+              user: comment.user.login,
+              body: comment.body,
+              created_at: comment.created_at
+            }));
 
-            // Set issue data as outputs
+            // Return issue details and comments in JSON format
             return {
               issue_number: issue_number,
               issue_title: issue_title,
               issue_body: issue_body,
-              comments: comment_data
+              issue_state: issue_state,
+              comments: JSON.stringify(comment_list)
             };
 
       - name: Azure CLI
@@ -67,6 +70,7 @@ jobs:
           issue-number: ${{ steps.issue_details.outputs.issue_number }}
           issue-title: ${{ steps.issue_details.outputs.issue_title }}
           issue-body: ${{ steps.issue_details.outputs.issue_body }}
+          issue-state: ${{ steps.issue_details.outputs.issue_state }}
           comments: ${{ steps.issue_details.outputs.comments }}
         with:
           inlineScript: |
@@ -77,4 +81,5 @@ jobs:
               --variables issue_number=${{ env.issue-number }} \
                           issue_title="${{ env.issue-title }}" \
                           issue_body="${{ env.issue-body }}" \
+                          issue_state="${{ env.issue_state }}" \
                           comments="${{ env.comments }}"
